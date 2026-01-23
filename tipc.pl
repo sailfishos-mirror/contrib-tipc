@@ -3,7 +3,7 @@
     Author:        Jeffrey Rosenwald
     E-mail:        jeffrose@acm.org
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2020, Jeffrey Rosenwald
+    Copyright (c)  2009-2026, Jeffrey Rosenwald
     All rights reserved.
 
     Redistribution and use in source and binary forms, with or without
@@ -98,7 +98,7 @@ details.
 %    Creates  a  TIPC-domain  socket  of    the  type  specified  by
 %    SocketType, and unifies it to an  identifier, SocketId.
 %
-%    @param SocketType is one of  the   following  atoms:
+%    @arg SocketType is one of  the   following  atoms:
 %
 %    * rdm - unnumbered, reliable datagram service,
 %    * dgram - unnumbered, unreliable datagram service,
@@ -124,7 +124,7 @@ details.
 %     connection, it should discard the  accepted socket immediately
 %     using tipc_close_socket/1.
 %
-%    @param SocketId the socket identifier returned by tipc_socket/2
+%    @arg SocketId the socket identifier returned by tipc_socket/2
 %    or tipc_accept/3.
 
 %!  tipc_subscribe(+SocketId, +NameSeqAddress, +Timeout, +Filter, +UserHandle) is det.
@@ -160,62 +160,63 @@ details.
 %    programs is strongly discouraged. See the "tipc_service"
 %    predicates for equivalent functionality.|_
 %
-%    @param SocketId the socket  identifier   that  was  provided by
+%    @arg SocketId the socket  identifier   that  was  provided by
 %    tipc_socket/2,  and  is  connected  to   the  topology  server,
 %    name(1,1,0), via tipc_connect/2.
 %
-%    @param NameSeqAddress the name_seq/3 address  of the service to
+%    @arg NameSeqAddress the name_seq/3 address  of the service to
 %    be monitored.
 %
-%    @param PortId the port-id of the socket   that  is bound to the
+%    @arg PortId the port-id of the socket   that  is bound to the
 %    service
 %
-%    @param Timeout an integer that specifies   the  duration of the
+%    @arg Timeout an integer that specifies   the  duration of the
 %    subscription in milliseconds. A  duration   of  -1, specifies a
-%    subscription of infinite duration.  @param   Filter  the  event
+%    subscription of infinite duration.  @arg   Filter  the  event
 %    filter bit map.
 %
-%    @param UserHandle an eight-byte code that is passed
+%    @arg UserHandle an eight-byte code that is passed
 %    transparently to the user with each event notification.
 
 %!   tipc_open_socket(+SocketId, -InStream, -OutStream) is det.
 %
-%    Opens two SWI-Prolog I/O-streams, one to   deal with input from
-%    the socket and one with output   to  the socket. If tipc_bind/3
-%    has been called on the socket, OutStream is useless and will
-%    not be created. After closing both InStream and OutStream, the
-%    socket itself is discarded.
+%    Opens two SWI-Prolog I/O-streams, one to   deal with input from the
+%    socket and one with output to the   socket. If tipc_bind/3 has been
+%    called on the socket, OutStream is useless and will not be created.
+%    After closing both InStream and  OutStream,   the  socket itself is
+%    discarded.
 
 %!   tipc_bind(+Socket, +Address, +ScopingOption) is det.
 %
-%    Associates/disassociates a socket with the name/3 or name_seq/3
-%    address specified in Address. It also registers/unregisters it in
-%    the  topology  server  name  table.   This  makes  the  address
-%    visible/invisible to the rest of the   network according to the
-%    scope specified in ScopingOption. ScopingOption   is a grounded
-%    term that is one of:
+%    Associates/disassociates a socket with  the   name/3  or name_seq/3
+%    address specified in Address. It   also registers/unregisters it in
+%    the  topology  server  name   table.    This   makes   the  address
+%    visible/invisible to the rest of the network according to the scope
+%    specified in ScopingOption. ScopingOption is   a grounded term that
+%    is one of:
 %
-%     $ scope(Scope) : where Scope is  one of: =zone=, =cluster=, or
-%     =node=. Servers may bind to more   than  one address by making
-%     successive calls to tipc_bind/3, one for  each address that it
-%     wishes to advertise. The server will   receive traffic for all
-%     of them. A server may, for  example, register one address with
-%     node scope, another with cluster scope,  and a third with zone
-%     scope. A client may then limit   the scope of its transmission
-%     by specifying the appropriate address.
+%     - scope(Scope)
+%     Where Scope is one of: `zone1,   `cluster1, or `node1. Servers may
+%     bind to more than  one  address   by  making  successive  calls to
+%     tipc_bind/3, one for each address that it wishes to advertise. The
+%     server will receive traffic for all  of   them.  A server may, for
+%     example, register one  address  with   node  scope,  another  with
+%     cluster scope, and a third with  zone   scope.  A  client may then
+%     limit the scope of its transmission  by specifying the appropriate
+%     address.
 %
-%     $ no_scope(Scope) : where Scope is as defined above. An
-%     application may target a specific address for removal from its
-%     collection of addresses by specifying the address and its
-%     scope. The scoping option, =|no_scope(all)|=, may be used to
-%     unbind the socket from all of its registered addresses. This
-%     feature allows an application to gracefully exit from service.
-%     Because the socket remains open, the application may continue
-%     to service current transactions to completion. TIPC however,
-%     will not schedule any new work for the server instance. If no
-%     other servers are available, the work will be rejected or
-%     dropped according to the socket options specified by the
-%     client.
+%     - no_scope(Scope)
+%     Where Scope is as  defined  above.   An  application  may target a
+%     specific address for removal from its   collection of addresses by
+%     specifying  the  address  and  its   scope.  The  scoping  option,
+%     =|no_scope(all)|=, may be used to unbind   the  socket from all of
+%     its registered addresses. This feature   allows  an application to
+%     gracefully exit from service. Because the socket remains open, the
+%     application  may  continue  to  service  current  transactions  to
+%     completion. TIPC however, will not schedule   any new work for the
+%     server instance. If no other servers  are available, the work will
+%     be rejected or dropped according to   the socket options specified
+%     by the client.
 %
 %    Connection-oriented, byte-stream services are  implemented with
 %    this predicate combined with   tipc_listen/2 and tipc_accept/3.
@@ -266,22 +267,21 @@ details.
 %
 %    Sets options on the socket. Defined options are:
 %
-%    $ importance(+Priority) :
+%    - importance(+Priority)
 %    Allow sockets to assign a priority   to their traffic. Priority
-%    is one of : =low= (default), =medium=, =high=, or =critical=.
+%    is one of : `low1 (default), `medium1, `high1, or `critical1.
 %
-%    $ src_droppable(+Boolean) :
+%    - src_droppable(+Boolean)
 %    Allow TIPC to silently discard packets in congested situations,
 %    rather than queuing them for later transmission.
 %
-%    $ dest_droppable(+Boolean) :
+%    - dest_droppable(+Boolean)
 %    Allow TIPC to silently discard packets in congested situations,
 %    rather than returning them to the sender as undeliverable.
 %
-%    $ conn_timeout(+Seconds) :
+%    - conn_timeout(+Seconds)
 %    Specifies the time interval that tipc_connect/2 will use before
-%    abandoning a connection attempt. Default: 8.000 sec, Minimum 0,
-%    Maximum 300 sec.
+%    abandoning a connection attempt. Default: 8.000 sec, Minimum 0.
 
 %!   tipc_receive(+Socket, -Data, -From, +OptionList) is det.
 %
@@ -292,11 +292,11 @@ details.
 %
 %     Defined options are:
 %
-%      * as(+Type)
+%      - as(+Type)
 %      Defines the returned term-type. Type is one of atom, codes or
 %      string (default).
 %
-%      * nonblock
+%      - nonblock
 %      Poll the socket and return immediately. If a message is
 %      present, it is returned. If not, then an exception,
 %      error(socket_error(eagain, Message), _), will be thrown. Users
@@ -306,7 +306,7 @@ details.
 %
 %    The typical sequence to receive a connectionless TIPC datagram is:
 %
-%    ==
+%    ```
 %    receive :-
 %            tipc_socket(S, dgram),
 %            tipc_bind(S, name(18888, 10, 0), scope(zone)),
@@ -315,8 +315,7 @@ details.
 %                format('Got ~q from ~q~n', [Data, From]),
 %                Data == quit,
 %            !, tipc_close_socket(S).
-%    ==
-%
+%    ```
 
 %!   tipc_send(+Socket, +Data, +To, +Options) is det.
 %
@@ -328,12 +327,12 @@ details.
 %
 %    A simple example to send a connectionless TIPC datagram is:
 %
-%    ==
+%    ```
 %    send(Message) :-
 %            tipc_socket(S, dgram),
 %            tipc_send(S, Message, name(18888, 10,0), []),
 %            tipc_close_socket(S).
-%    ==
+%    ```
 %
 %    Messages are delivered silently unless  some form of congestion
 %    was encountered and the   =|dest_droppable(false)|=  option was
@@ -352,7 +351,6 @@ details.
 %   Parses event notifications received from   the  topology server
 %   into Prolog structures. This  predicate   has  been  permanently
 %   removed.
-%
 
 %!  tipc_receive_subscr_event(+Socket, -Event) is semidet.
 %
@@ -363,23 +361,23 @@ details.
 %   in user programs is strongly discouraged. See the
 %   tipc-service predicates for alternatives.|_
 %
-%   @param Socket is a TIPC socket that has been previously
+%   @arg Socket is a TIPC socket that has been previously
 %   connected to the topology server using tipc_connect/2, and for
 %   which a subscription has been sent using tipc_subscribe/5,
 %   above.
 %
-%   @param Event is the structure: =|tipc_event(-Action, -Subscr,
+%   @arg Event is the structure: =|tipc_event(-Action, -Subscr,
 %   -Found, -Port_id)|=. On subscription timeout, the
-%   atom, =subscr_timeout= is returned. Subscr is the name-sequence
+%   atom, `subscr_timeout1 is returned. Subscr is the name-sequence
 %   address of the original subscription.
 %
 %   Action is one of:
 %
-%     $ published :
+%     - published
 %     The socket specified by Port_id has been bound to
 %     the name_seq/3 address specified in Found.
 %
-%     $ withdrawn :
+%     - withdrawn
 %     The socket specified by Port_id has been
 %     unbound from the name_seq/3 address specified in Found. See
 %     the no_scope/1 option of tipc_bind/3.
@@ -429,7 +427,7 @@ user:portray(port_id(Ref, Node)) :-
 %   Interrogates the TIPC topology server to see if a service is
 %   available at an advertised Address.
 %
-%   @param Address is one of:   =|name(Type,  Instance, Domain)|= or
+%   @arg Address is one of:   =|name(Type,  Instance, Domain)|= or
 %   =|name_seq(Type,  Lower,  Upper)|=.   A    name/3,   address  is
 %   translated to a name_seq/3, following, where Lower and Upper are
 %   assigned the value of Instance. Domain is unused and must be
@@ -438,7 +436,7 @@ user:portray(port_id(Ref, Node)) :-
 %   service that would answer according to multi-cast addressing
 %   rules.
 %
-%   @param Timeout is optional. It is a non-negative real number
+%   @arg Timeout is optional. It is a non-negative real number
 %   that specifies the amount of time in seconds to block and wait
 %   for a service to become available. Fractions of a second are
 %   also permissible.
@@ -474,10 +472,10 @@ tipc_service_exists(Address, Timeout) :-
 %   Allows a user to discover the instance ranges and/or port-ids
 %   for a particular service.
 %
-%   @param Address is a name_seq/3 address. The address type must be
+%   @arg Address is a name_seq/3 address. The address type must be
 %   grounded.
 %
-%   @param PortId is  unified  with  the   port-id  for  a  specific
+%   @arg PortId is  unified  with  the   port-id  for  a  specific
 %   name_sequence address.
 %
 
@@ -529,10 +527,10 @@ sp_collect(S, Members) :-
 %   notification, thus delegating the notification event handling to
 %   others.
 %
-%   @param Addresses is a list of name/3 or name_seq/3 addresses
+%   @arg Addresses is a list of name/3 or name_seq/3 addresses
 %   for the services to be monitored.
 %
-%   @param Goal is a predicate that will be called when a
+%   @arg Goal is a predicate that will be called when a
 %   worker's publication status changes. The Goal
 %   is called exactly once per event with its the last argument
 %   unified with the structure:
@@ -543,7 +541,7 @@ sp_collect(S, Members) :-
 %   $ withdrawn(-NameSeq, -PortId) : when the worker
 %   unbinds its socket from the address.
 %
-%   @param Timeout is optional.  It  is   one  of:
+%   @arg Timeout is optional.  It  is   one  of:
 %
 %   $ Timeout : a non-negative real number that specifies the
 %   number of seconds that surveillance is to be continued.

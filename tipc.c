@@ -3,7 +3,7 @@
     Author:        Jeffrey Rosenwald
     E-mail:        jeffrose@acm.org
     WWW:           http://www.swi-prolog.org
-    Copyright (c)  2009-2025, Jeffrey Rosenwald
+    Copyright (c)  2009-2026, Jeffrey Rosenwald
 			      SWI-Prolog Solutions b.v.
     All rights reserved.
 
@@ -44,6 +44,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <limits.h>
 #include <errno.h>
 #include <sys/types.h>
 #include <assert.h>
@@ -114,7 +115,7 @@ release_tipc_symbol(atom_t symbol)
 { nbio_sock_t s = *(nbio_sock_t*)PL_blob_data(symbol, NULL, NULL);
 
   freeSocket(s);
-  return TRUE;
+  return true;
 }
 
 static int
@@ -133,7 +134,7 @@ write_tipc_symbol(IOSTREAM *s, atom_t symbol, int flags)
 { nbio_sock_t sock = *(nbio_sock_t*)PL_blob_data(symbol, NULL, NULL);
 
   Sfprintf(s, "<tipc_socket>(%p)", sock);
-  return TRUE;
+  return true;
 }
 
 
@@ -148,15 +149,15 @@ static PL_blob_t tipc_blob =
 };
 
 
-static int
+static bool
 tipc_unify_socket(term_t handle, nbio_sock_t socket)
 { if ( PL_unify_blob(handle, &socket, sizeof(socket), &tipc_blob) )
-    return TRUE;
+    return true;
 
   if ( !PL_is_variable(handle) )
     return PL_uninstantiation_error(handle);
 
-  return FALSE;					/* (resource) error */
+  return false;					/* (resource) error */
 }
 
 
@@ -188,22 +189,16 @@ tipc_get_socket(term_t handle, nbio_sock_t *sp)
 #define tcp_get_socket(t, p) tipc_get_socket(t, p)
 #include "sockcommon.c"
 
-static int
+static bool
 get_uint(term_t term, unsigned *value)
 { int64_t v0;
 
   if ( !PL_get_int64(term, &v0))
-    return FALSE;
-
-#if 0
-	/* tipc users are somewhat cavalier about using -1 in place of 4294967295U */
-  if(v0 < -1 || v0 > UINT_MAX)
-	return FALSE;
-#endif
+    return false;
 
   *value = (unsigned) v0 & 0xffffffff;
 
-  return TRUE;
+  return true;
 }
 
 static int
@@ -229,7 +224,7 @@ nbio_get_tipc(term_t tipc, struct sockaddr_tipc *sockaddr)
     sockaddr->addr.id.ref  = ref;
     sockaddr->addr.id.node = node;
 
-    return TRUE;
+    return true;
   }
 
   if ( PL_is_functor(tipc, FUNCTOR_name3) )
@@ -253,7 +248,7 @@ nbio_get_tipc(term_t tipc, struct sockaddr_tipc *sockaddr)
     sockaddr->addr.name.name.instance = arg2;
     sockaddr->addr.name.domain        = arg3;
 
-    return TRUE;
+    return true;
 
   }
 
@@ -279,12 +274,12 @@ nbio_get_tipc(term_t tipc, struct sockaddr_tipc *sockaddr)
     sockaddr->addr.nameseq.lower = arg2;
     sockaddr->addr.nameseq.upper = arg3;
 
-    return TRUE;
+    return true;
   }
 
-  } while(FALSE);
+  } while(false);
 
-  return FALSE;
+  return false;
 }
 
 
@@ -293,7 +288,7 @@ nbio_get_tipc_sockaddr(term_t Address, struct sockaddr_tipc *addr)
 { if ( !nbio_get_tipc(Address, addr) )
     return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, Address, "tipc address");
 
-  return TRUE;
+  return true;
 }
 
 
@@ -379,7 +374,7 @@ pl_tipc_setopt(term_t Socket, term_t opt)
   size_t arity;
 
   if ( !tipc_get_socket(Socket, &socket) )
-    return FALSE;
+    return false;
 
   if ( PL_get_name_arity(opt, &a, &arity) )
   { if ( a == ATOM_importance && arity == 1 )
@@ -387,9 +382,9 @@ pl_tipc_setopt(term_t Socket, term_t opt)
       term_t a1 = PL_new_term_ref();
       int ival = TIPC_LOW_IMPORTANCE;
 
-      if (PL_get_arg(1, opt, a1))
-      { if(!PL_get_atom(a1, &val) )
-	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a1, "atom");
+      if ( PL_get_arg(1, opt, a1) )
+      { if ( !PL_get_atom_ex(a1, &val) )
+	  return false;
 
 	if(val == ATOM_low)
 	  ival = TIPC_LOW_IMPORTANCE;
@@ -400,9 +395,9 @@ pl_tipc_setopt(term_t Socket, term_t opt)
 	else if(val == ATOM_critical)
 	  ival = TIPC_CRITICAL_IMPORTANCE;
 	else
-	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a1, "low, medium, high, or critical");
+	  return PL_domain_error("low, medium, high, or critical", a1);
 
-	return((tipc_setopt(socket, NB_TIPC_IMPORTANCE, ival) == 0) ? TRUE : FALSE);
+	return tipc_setopt(socket, NB_TIPC_IMPORTANCE, ival) == 0;
       }
     }
 
@@ -413,11 +408,11 @@ pl_tipc_setopt(term_t Socket, term_t opt)
       int option = (a == ATOM_dest_droppable) ? NB_TIPC_DEST_DROPPABLE
 					      : NB_TIPC_SRC_DROPPABLE;
 
-      if (PL_get_arg(1, opt, a1))
-      { if(!PL_get_bool(a1, &val) )
-	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a1, "boolean");
+      if ( PL_get_arg(1, opt, a1) )
+      { if ( !PL_get_bool_ex(a1, &val) )
+	  return false;
 
-	return((tipc_setopt(socket, option, val) == 0) ? TRUE : FALSE);
+	return tipc_setopt(socket, option, val) == 0;
       }
     }
     if ( a == ATOM_conn_timeout && arity == 1 )
@@ -425,13 +420,17 @@ pl_tipc_setopt(term_t Socket, term_t opt)
       int ival;
       term_t a1 = PL_new_term_ref();
 
-      if (PL_get_arg(1, opt, a1))
-      { if(!PL_get_float(a1, &val) || val < 0 || val > 300)
-	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a1, "float");
+      if ( PL_get_arg(1, opt, a1) )
+      { if ( !PL_get_float_ex(a1, &val) )
+	  false;
 
-        ival = (int) (ival * 1000);  // time is in milliseconds, safe cast
+	val *= 1000;	/* time is an int in milliseconds */
+	if ( val < 0 || val > INT_MAX )
+	  return PL_domain_error("timeout", a1);
 
-	return((tipc_setopt(socket, NB_TIPC_CONN_TIMEOUT, ival) == 0) ? TRUE : FALSE);
+        ival = (int)val;
+
+	return tipc_setopt(socket, NB_TIPC_CONN_TIMEOUT, ival) == 0;
       }
     }
 
@@ -439,42 +438,39 @@ pl_tipc_setopt(term_t Socket, term_t opt)
     { int enable, rc;
 
       if ( arity == 0 )
-      { enable = TRUE;
+      { enable = true;
       } else /*if ( arity == 1 )*/
       { term_t a = PL_new_term_ref();
 
 	_PL_get_arg(1, opt, a);
-	if ( !PL_get_bool(a, &enable) )
-	  return pl_error(NULL, 0, NULL, ERR_DOMAIN, a, "boolean");
+	if ( !PL_get_bool_ex(a, &enable) )
+	  return false;
       }
 
       if ( (rc=nbio_setopt(socket, TCP_NO_DELAY, enable) == 0) )
-	return TRUE;
+	return true;
       if ( rc == -2 )
-	return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
+	return PL_domain_error("socket_option", opt);
 
     }
 
     if ( a == ATOM_nonblock && arity == 0 )
-      return((nbio_setopt(socket, TCP_NONBLOCK) == 0) ? TRUE : FALSE );
+      return nbio_setopt(socket, TCP_NONBLOCK) == 0;
 
     if ( a == ATOM_dispatch && arity == 1 )
     { int val;
       term_t a1 = PL_new_term_ref();
 
       if ( PL_get_arg(1, opt, a1) && PL_get_bool(a1, &val) )
-      { if ( nbio_setopt(socket, TCP_DISPATCH, val) == 0 )
-	  return TRUE;
-	return FALSE;
-      }
+	return nbio_setopt(socket, TCP_DISPATCH, val) == 0;
     }
   }
 
-  return pl_error(NULL, 0, NULL, ERR_DOMAIN, opt, "socket_option");
+  return PL_domain_error("socket_option", opt);
 }
 
 
-static int
+static bool
 unify_tipc_address(term_t t, struct sockaddr_tipc *addr)
 { switch ( addr->addrtype )
   { case TIPC_ADDR_ID:
@@ -492,7 +488,7 @@ unify_tipc_address(term_t t, struct sockaddr_tipc *addr)
 			   IntArg(addr->addr.nameseq.lower),
 			   IntArg(addr->addr.nameseq.upper));
     default:
-      return FALSE;
+      return false;
   }
 }
 
@@ -511,7 +507,7 @@ pl_tipc_basic_get_name(term_t Socket, term_t t, int peer)
   memset(&addr, 0, sizeof(addr));
 
   if ( !tipc_get_socket(Socket, &socket))
-    return FALSE;
+    return false;
 
   fd = nbio_fd(socket);
 
@@ -524,14 +520,12 @@ pl_tipc_basic_get_name(term_t Socket, term_t t, int peer)
 
 static foreign_t
 pl_tipc_get_name(term_t Socket, term_t t)
-{
-	return pl_tipc_basic_get_name(Socket, t, 0);
+{ return pl_tipc_basic_get_name(Socket, t, 0);
 }
 
 static foreign_t
 pl_tipc_get_peer_name(term_t Socket, term_t t)
-{
-	return pl_tipc_basic_get_name(Socket, t, 1);
+{ return pl_tipc_basic_get_name(Socket, t, 1);
 }
 
 #define TIPC_MAXDATA TIPC_MAX_USER_MSG_SIZE
@@ -557,19 +551,18 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
     term_t head = PL_new_term_ref();
     term_t arg  = PL_new_term_ref();
 
-    while(PL_get_list(tail, head, tail))
+    while( PL_get_list(tail, head, tail) )
     { atom_t name;
       size_t arity;
 
       if ( PL_get_name_arity(head, &name, &arity) )
-      {
-	if ( name == ATOM_as && arity == 1)
+      { if ( name == ATOM_as && arity == 1)
 	{ atom_t a;
 
 	  _PL_get_arg(1, head, arg);
 
-	  if ( !PL_get_atom(arg, &a) )
-	    return pl_error(NULL, 0, NULL, ERR_TYPE, head, "atom");
+	  if ( !PL_get_atom_ex(arg, &a) )
+	    return false;
 	  if ( a == ATOM_atom )
 	    as = PL_ATOM;
 	  else if ( a == ATOM_codes )
@@ -577,30 +570,29 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
 	  else if ( a == ATOM_string )
 	    as = PL_STRING;
 	  else
-	    return pl_error(NULL, 0, NULL, ERR_DOMAIN, arg, "as_option");
+	    return PL_domain_error("as_option", arg);
+	} else if ( name == ATOM_nonblock && arity == 0 )
+	{ flags |= MSG_DONTWAIT;
+	} else
+	{ return PL_type_error("option", head);
 	}
-        else if (name == ATOM_nonblock && arity == 0)
-          flags |= MSG_DONTWAIT;
-        else
-	  return pl_error(NULL, 0, NULL, ERR_TYPE, head, "option");
-      }
-      else
-	return pl_error(NULL, 0, NULL, ERR_TYPE, head, "option");
+      } else
+	return PL_type_error("option", head);
     }
-    if ( !PL_get_nil(tail) )
-      return pl_error(NULL, 0, NULL, ERR_TYPE, tail, "list");
+    if ( !PL_get_nil_ex(tail) )
+      return false;
   }
 
 
   if ( !tipc_get_socket(Socket, &socket))
-    return FALSE;
+    return false;
 
   if ( (n=nbio_recvfrom(socket, buf, sizeof(buf), flags,
 			(struct sockaddr*)&sockaddr, &alen)) == -1 )
     return nbio_error(errno, TCP_ERRNO);
 
   if ( !PL_unify_chars(Data, as, n, buf) )
-    return FALSE;
+    return false;
 
   return unify_tipc_address(From, &sockaddr);
 }
@@ -623,11 +615,11 @@ pl_tipc_send(term_t Socket, term_t Data, term_t To, term_t Options)
   memset(&sockaddr, 0, sizeof(sockaddr));
 
   if ( !PL_get_nchars(Data, &dlen, &data, CVT_ALL|CVT_EXCEPTION) )
-    return FALSE;
+    return false;
 
   if ( !tipc_get_socket(Socket, &socket) ||
        !nbio_get_tipc_sockaddr(To, &sockaddr) )
-    return FALSE;
+    return false;
 
   if ( (n=nbio_sendto(socket, data,
 		      (int)dlen,
@@ -635,7 +627,7 @@ pl_tipc_send(term_t Socket, term_t Data, term_t To, term_t Options)
 		      (struct sockaddr*)&sockaddr, alen)) == -1 )
     return nbio_error(errno, TCP_ERRNO);
 
-  return TRUE;
+  return true;
 }
 
 #ifndef AF_TIPC
@@ -647,7 +639,7 @@ create_tipc_socket(term_t socket, int type)
 { nbio_sock_t sock;
 
   if ( !(sock = nbio_socket(AF_TIPC, type, 0)) )
-    return FALSE;
+    return false;
 
   return tipc_unify_socket(socket, sock);
 }
@@ -656,9 +648,8 @@ create_tipc_socket(term_t socket, int type)
 static foreign_t
 tipc_socket(term_t socket, term_t opt)
 { atom_t a;
-  size_t arity;
 
-  if ( PL_get_name_arity(opt, &a, &arity) && arity == 0)
+  if ( PL_get_atom_ex(opt, &a) )
   { int type;
 
     if ( a == ATOM_dgram )
@@ -674,10 +665,8 @@ tipc_socket(term_t socket, term_t opt)
 
     return create_tipc_socket(socket, type);
   } else
-  { return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, opt, "atom");
+  { return false;
   }
-
-  return FALSE;
 }
 
 
@@ -690,16 +679,16 @@ pl_tipc_accept(term_t Master, term_t Slave, term_t Peer)
   memset(&addr, 0, sizeof(addr));
 
   if ( !tipc_get_socket(Master, &master) )
-    return FALSE;
+    return false;
 
   if ( !(slave = nbio_accept(master, (struct sockaddr*)&addr, &addrlen)) )
-    return FALSE;
+    return false;
 					/* TBD: close on failure */
   if ( unify_tipc_address(Peer, &addr) &&
        tipc_unify_socket(Slave, slave) )
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -712,12 +701,12 @@ pl_tipc_connect(term_t Socket, term_t Address)
 
   if ( !tipc_get_socket(Socket, &sock) ||
        !nbio_get_tipc_sockaddr(Address, &sockaddr) )
-    return FALSE;
+    return false;
 
   if ( nbio_connect(sock, (struct sockaddr*)&sockaddr, sizeof(sockaddr)) == 0 )
-    return TRUE;
+    return true;
 
-  return FALSE;
+  return false;
 }
 
 
@@ -733,7 +722,7 @@ pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
 
   if ( !tipc_get_socket(Socket, &socket) ||
        !nbio_get_tipc_sockaddr(Address, &sockaddr) )
-    return FALSE;
+    return false;
 
   if ( PL_get_name_arity(opt, &a, &arity) )
   { if ( (a == ATOM_scope || a == ATOM_no_scope) && arity == 1 )
@@ -761,12 +750,12 @@ pl_tipc_bind(term_t Socket, term_t Address, term_t opt)
                                            : -ival;
 
 	if ( nbio_bind(socket, (struct sockaddr*)&sockaddr, (socklen_t) addrlen) < 0 ) /* safe cast */
-	  return FALSE;
+	  return false;
       }
     } else
       return pl_error(NULL, 0, NULL, ERR_ARGTYPE, 1, opt, "scoping option");
 
-    return TRUE;
+    return true;
   }
 
   return pl_error(NULL, 0, NULL, ERR_DOMAIN, a, "scope/1");
@@ -788,7 +777,7 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
 
   if ( !tipc_get_socket(Socket, &socket) ||
        !nbio_get_tipc_sockaddr(Address, &sockaddr))
-    return FALSE;
+    return false;
 
   if(sockaddr.addrtype != TIPC_ADDR_NAMESEQ)
     return pl_error(NULL, 0, NULL, ERR_DOMAIN, Address, "name_seq/3");
@@ -800,7 +789,7 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
     return pl_error(NULL, 0, NULL, ERR_DOMAIN, filter, "integer");
 
   if ( !PL_get_nchars(usr_handle, &handle_len, &handle, CVT_ALL|CVT_EXCEPTION) )
-    return FALSE;
+    return false;
 
   if(tipc_version > 1)
   { struct tipc_name_seq *p = &subscr.seq,
@@ -829,7 +818,7 @@ pl_tipc_subscribe(term_t Socket, term_t Address,
   if ( (send(fd, &subscr, sizeof(subscr), 0)) != sizeof(subscr) )
     return nbio_error(errno, TCP_ERRNO);
   else
-    return TRUE;
+    return true;
 }
 
 static foreign_t
@@ -853,14 +842,14 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
   memset(&sockaddr, 0, sizeof(sockaddr));
 
   if ( !tipc_get_socket(Socket, &socket))
-    return FALSE;
+    return false;
 
   if ( (n=nbio_recvfrom(socket, buf.asCodes, sizeof(buf.asCodes), flags,
 			(struct sockaddr*)&sockaddr, &alen)) == -1 )
     return nbio_error(errno, TCP_ERRNO);
 
   if(n != sizeof(*event))
-     return FALSE;
+     return false;
 
   if(tipc_version > 1)
   { struct tipc_name_seq *p = &event->s.seq;
@@ -898,27 +887,27 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
 			   IntArg(event->s.seq.type),
 			   IntArg(event->s.seq.lower),
 			   IntArg(event->s.seq.upper)))
-             return FALSE;
+             return false;
 
           if(!PL_unify_term(Found, PL_FUNCTOR_CHARS, "name_seq", 3,
 			   IntArg(event->s.seq.type),
 			   IntArg(event->found_lower),
 			   IntArg(event->found_upper)))
-             return FALSE;
+             return false;
 
           if(!PL_unify_term(Port_id, PL_FUNCTOR_CHARS, "port_id", 2,
 			   IntArg(event->port.ref),
 			   IntArg(event->port.node)))
-             return FALSE;
+             return false;
 
           if(!PL_unify_term(Data, PL_FUNCTOR_CHARS, "tipc_event", 4,
                AtomArg(event_chars),
 			   PL_TERM, Subscr,
 			   PL_TERM, Found,
 			   PL_TERM, Port_id))
-             return FALSE;
+             return false;
 
-          return TRUE;
+          return true;
         }
 
       case TIPC_SUBSCR_TIMEOUT:
@@ -926,9 +915,9 @@ pl_tipc_receive_subscr_event(term_t Socket, term_t Data)
           return PL_unify_term(Data, PL_FUNCTOR_CHARS, "subscr_timeout", 0);
         }
       default:
-          return FALSE;
+          return false;
    };
-  return FALSE;
+  return false;
 }
 
 
