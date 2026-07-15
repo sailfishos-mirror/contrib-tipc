@@ -75,7 +75,6 @@ static atom_t ATOM_stream;
 static atom_t ATOM_dispatch;    /* "dispatch" */
 static atom_t ATOM_nodelay;		/* "nodelay" */
 static atom_t ATOM_nonblock;		/* "nonblock" */
-static atom_t ATOM_as;			/* "as" */
 static atom_t ATOM_atom;		/* "atom" */
 static atom_t ATOM_string;		/* "string" */
 static atom_t ATOM_codes;		/* "codes" */
@@ -530,6 +529,12 @@ pl_tipc_get_peer_name(term_t Socket, term_t t)
 
 #define TIPC_MAXDATA TIPC_MAX_USER_MSG_SIZE
 
+static PL_option_t tipc_receive_options[] =
+{ PL_OPTION("as",	OPT_TERM),
+  PL_OPTION("nonblock",	OPT_BOOL),
+  PL_OPTIONS_END
+};
+
 static foreign_t
 pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
 { struct sockaddr_tipc sockaddr;
@@ -543,46 +548,30 @@ pl_tipc_receive(term_t Socket, term_t Data, term_t From, term_t options)
   char buf[TIPC_MAXDATA];
   ssize_t n;
   int as = PL_STRING;
+  term_t as_opt = 0;
+  int nonblock = false;
 
   memset(&sockaddr, 0, sizeof(sockaddr));
 
-  if ( !PL_get_nil(options) )
-  { term_t tail = PL_copy_term_ref(options);
-    term_t head = PL_new_term_ref();
-    term_t arg  = PL_new_term_ref();
+  if ( !PL_scan_options(options, 0, "tipc_receive_option",
+			tipc_receive_options, &as_opt, &nonblock) )
+    return false;
+  if ( as_opt )
+  { atom_t a;
 
-    while( PL_get_list(tail, head, tail) )
-    { atom_t name;
-      size_t arity;
-
-      if ( PL_get_name_arity(head, &name, &arity) )
-      { if ( name == ATOM_as && arity == 1)
-	{ atom_t a;
-
-	  _PL_get_arg(1, head, arg);
-
-	  if ( !PL_get_atom_ex(arg, &a) )
-	    return false;
-	  if ( a == ATOM_atom )
-	    as = PL_ATOM;
-	  else if ( a == ATOM_codes )
-	    as = PL_CODE_LIST;
-	  else if ( a == ATOM_string )
-	    as = PL_STRING;
-	  else
-	    return PL_domain_error("as_option", arg);
-	} else if ( name == ATOM_nonblock && arity == 0 )
-	{ flags |= MSG_DONTWAIT;
-	} else
-	{ return PL_type_error("option", head);
-	}
-      } else
-	return PL_type_error("option", head);
-    }
-    if ( !PL_get_nil_ex(tail) )
+    if ( !PL_get_atom_ex(as_opt, &a) )
       return false;
+    if ( a == ATOM_atom )
+      as = PL_ATOM;
+    else if ( a == ATOM_codes )
+      as = PL_CODE_LIST;
+    else if ( a == ATOM_string )
+      as = PL_STRING;
+    else
+      return PL_domain_error("as_option", as_opt);
   }
-
+  if ( nonblock )
+    flags |= MSG_DONTWAIT;
 
   if ( !tipc_get_socket(Socket, &socket))
     return false;
@@ -962,7 +951,6 @@ install_tipc()
   ATOM_dispatch        = PL_new_atom("dispatch");
   ATOM_nodelay	       = PL_new_atom("nodelay");
   ATOM_nonblock	       = PL_new_atom("nonblock");
-  ATOM_as	       = PL_new_atom("as");
   ATOM_atom	       = PL_new_atom("atom");
   ATOM_string	       = PL_new_atom("string");
   ATOM_codes	       = PL_new_atom("codes");
